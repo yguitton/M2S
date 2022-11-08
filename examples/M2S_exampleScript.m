@@ -2,7 +2,7 @@
 %
 % This script contains brief explanations on each step of the M2S toolbox
 % to match metabolomics features of two untargeted datasets using RT/MZ/FI.
-% It contains data to run two examples, all possibilities of inputs, and 
+% It contains data to run two examples, all possibilities of inputs, and
 % lines of code to run the method on default or user-defined settings.
 % *** To run code and figures select the desired line(s) and click F9 ***
 % Save this file with another name and modify it to run your own projects.
@@ -12,8 +12,8 @@
 % *** Imperial College London, 2021 ***
 
 
-%% Load reference and target features of sets to match 
-% These are two data files containing 3 columns without headers, only values for each feature, in this order: RT, MZ, FI. 
+%% Load reference and target features of sets to match
+% These are two data files containing 3 columns without headers, only values for each feature, in this order: RT, MZ, FI.
 % NOTE: RT = retention time median;  MZ = mass-to-charge (m/z) ratio median; FI = Feature Intensity median
 % RT should be in minutes. If it is in seconds, divide it by 60;
 % If there is no feature intensity use a column with ones or random values.
@@ -34,21 +34,28 @@ elseif datasetName == "LPOS"
     targetFilename = 'test_targetFeatures_LPOS_csv.csv';
 end
 
-% Function 'importdata.m' loads data from .csv, .txt, or .xlsx 
+% Function 'importdata.m' loads data from .csv, .txt, or .xlsx
 % (You may need to change directory to the file location)
 [refFeatures] = importdata(refFilename);
 [targetFeatures] = importdata(targetFilename);
 
-% Create labels for all features
+% Addition YGU source or laod files from ../ repo
+addpath ("../")
 
+% Addition YGU replacement function for contains equivalent
+% Anonymous function mimicking contains from https://stackoverflow.com/questions/59743559/is-there-an-octave-equivalent-of-matlabs-contains-function
+
+contains = @(str, pattern) ~cellfun('isempty', strfind(str, pattern));
+
+pkg load statistics; #addition YGU
 [refMZRT_str] = M2S_createLabelMZRT('ref',refFeatures(:,2),refFeatures(:,1));
 [targetMZRT_str] = M2S_createLabelMZRT('target',targetFeatures(:,2),targetFeatures(:,1));
 
 % Visualize the two feature sets
 M2S_figureH(0.8,0.5)
-subplot(1,2,1), 
+subplot(1,2,1),
 M2S_plotMZRT_featureSet(refFeatures,1,8,1); title('Reference featureSet')
-subplot(1,2,2), 
+subplot(1,2,2),
 M2S_plotMZRT_featureSet(targetFeatures,1,8,1); title('Target featureSet')
 
 %%*************************************************************************
@@ -58,13 +65,13 @@ M2S_plotMZRT_featureSet(targetFeatures,1,8,1); title('Target featureSet')
 % create a structure to keep the options chosen at each step
 opt = struct;
 
-%% Set thresholds for matching all features 
+%% Set thresholds for matching all features
 % Try running it with default settings as below, to see the major trends.
 % It may become very crowded.
 % Default settings: no RTthresh ; MZthresh < 0.02 (m/z); log10FIthresh < 1000
 % Later each setting can be set as desired.
 [refSet,targetSet,Xr_connIdx,Xt_connIdx, opt]=M2S_matchAll(refFeatures,targetFeatures);
-        
+
 % Additional plot of results:
 Xsymbol = '.k';
 plotRow = 2; % y-axis is e.g. RTdist (1) or both RTdist and RT_target (2)
@@ -72,7 +79,7 @@ M2S_plotDelta_matchedSets(refSet,targetSet,Xsymbol,plotRow)
 
 
 % NOTES on setting thresholds:
-% Thresholds define the maximum acceptable inter-dataset shift for each dimension (RT, MZ, log10FI). 
+% Thresholds define the maximum acceptable inter-dataset shift for each dimension (RT, MZ, log10FI).
 % You can define "horizontal line" fixed thresholds by using only "intercept" values, and setting "slope" to zero.
 % These are equivalent to defining a fixed m/z.
 % You can define "diagonal line" relative thresholds by using also "slope" values.
@@ -92,7 +99,7 @@ if datasetName == "LNEG"
     opt.multThresh.MZ_slope = [-5e-6 5e-6]; % ppm
     opt.multThresh.log10FI_intercept = [-1 1.5];
     opt.multThresh.log10FI_slope = [0 1];
-    
+
 elseif datasetName == "LPOS"
     % Example settings for LPOS test data
     opt.FIadjustMethod = 'median'; % {'median','regression'}
@@ -101,8 +108,8 @@ elseif datasetName == "LPOS"
     opt.multThresh.MZ_intercept = [-0.0075 0.015];
     opt.multThresh.MZ_slope = [-0.01/2000, -0.01/2000];
     opt.multThresh.log10FI_intercept = [-1.4 0.75];
-    opt.multThresh.log10FI_slope = [0 0];    
-    
+    opt.multThresh.log10FI_slope = [0 0];
+
 end
 
 
@@ -114,12 +121,12 @@ end
 % Multiple match plots: plotType = 2 (with lines connecting clusters of multiple
 % matches containing the same feature). Also plots a network of all matches.
 
-plotType = 2; 
+plotType = 2;
 [refSet,targetSet,Xr_connIdx,Xt_connIdx,opt]=M2S_matchAll(refFeatures,targetFeatures,opt.multThresh,opt.FIadjustMethod,plotType);
 
 % OPTIONAL: Obtain properties of current network of matches, with focus
 % in one of the dimensions
-focusDim = 1 % 1=RT; 2=MZ; 
+focusDim = 1 % 1=RT; 2=MZ;
 [G1,CC] = M2S_infoClusters(refSet,targetSet,focusDim,':');
 
 %%*************************************************************************
@@ -127,7 +134,7 @@ focusDim = 1 % 1=RT; 2=MZ;
 %%*************************************************************************
 
 %% Find neighbours, the RT/MZ/log10FI trends, and the residuals - SETTINGS OPTIONAL
-% - Find the inter-dataset shifts in RT/MZ/log10FI, and  use it to 
+% - Find the inter-dataset shifts in RT/MZ/log10FI, and  use it to
 % calculate the residuals (distance to those shift curves).
 % - The method to find RT/MZ/FI shift trends uses subsets of features closest to each feature (the "neighbors").
 % For a reference feature, its shift is the median shift of its neighbours.
@@ -138,16 +145,16 @@ focusDim = 1 % 1=RT; 2=MZ;
 %       - "cross", finds neighbours of a feature in RT, MZ, FI individually.
 %       Different neighbours are found in each of these dimensions.
 %       -(default) "circle", finds neighbours by Euclidean distance using
-%       simultaneously RT and MZ (but not FI). "Circle" does not subtract the 
+%       simultaneously RT and MZ (but not FI). "Circle" does not subtract the
 %       trend from FI, only yelds the log10FI difference between target and ref.
 % - The shifts can be individual points for each ref feature, or additionally
-% smoothed using a robust loess 
+% smoothed using a robust loess
 %
 % SETTINGS POSSIBILITIES
-% opt.neighbours.nrNeighbors = 0.01; %as a percentage of the number of features in refSet  
+% opt.neighbours.nrNeighbors = 0.01; %as a percentage of the number of features in refSet
 % opt.neighbours.nrNeighbors = 21; % as a specific number of neighbours
 % opt.calculateResiduals.neighMethod = 'circle'; %{'cross','circle'}
-% opt.pctPointsLoess = 0.1; options are 0 (no loess) or ]0,1], use for the 
+% opt.pctPointsLoess = 0.1; options are 0 (no loess) or ]0,1], use for the
 % loess a percentage of the total number of points (size(refSet,1)).
 % plotTypeResiduals = 1 % Options are 0 (no plot), 1 (default), 2 (extra)
 
@@ -175,12 +182,12 @@ end
 % is easy to visualise the relevance of each of the dimension's residuals (RT/MZ/log10FI).
 %
 % SETTINGS POSSIBILITIES
-% opt.adjustResiduals.residPercentile = NaN 
-% Automatic determination (median + 3*MAD) using threshold point method. Different value for each dimension. 
-%    
-% opt.adjustResiduals.residPercentile = [0.05,0.004,1.2]; 
-% Set threshold points using residual values. These selected residual values become = 1 
-% (residuals can be seen in previous figure "Residuals for RT and MZ")  
+% opt.adjustResiduals.residPercentile = NaN
+% Automatic determination (median + 3*MAD) using threshold point method. Different value for each dimension.
+%
+% opt.adjustResiduals.residPercentile = [0.05,0.004,1.2];
+% Set threshold points using residual values. These selected residual values become = 1
+% (residuals can be seen in previous figure "Residuals for RT and MZ")
 
 
 if datasetName == "LNEG"
@@ -192,7 +199,7 @@ end
 
 
 %% Adjust the weight of each dimension (RT, MZ, log10FI), get penalisation scores
-% - The penalisation scores for each match are the squared root of the sum 
+% - The penalisation scores for each match are the squared root of the sum
 % of squares of the weighted residuals. Many times it is desired that log10FI has weight 0.
 % The highest penalty scores are attributed to the worst matches
 %
@@ -205,17 +212,17 @@ end
 
 if datasetName == "LNEG"
     opt.weights.W = [1,1,1]; % equal weight
-    [penaltyScores] = M2S_defineW_getScores(refSet,targetSet,adjResiduals_X,opt.weights.W,1); 
+    [penaltyScores] = M2S_defineW_getScores(refSet,targetSet,adjResiduals_X,opt.weights.W,1);
 elseif datasetName == "LPOS"
     opt.weights.W = [1,1,0.2]; % use log10FI
     [penaltyScores] = M2S_defineW_getScores(refSet,targetSet,adjResiduals_X,opt.weights.W,1);
 end
 
-%% Decide the best of the multiple matches 
+%% Decide the best of the multiple matches
 % - Recursive method for a multiple-match cluster at a time. In
-% each iteration it collects the (best) match with the lowest penalisation 
+% each iteration it collects the (best) match with the lowest penalisation
 % score, until there are no more selections to do in that cluster.
-% NOTE:you can visualise the decomposition of clusters with multiple matches 
+% NOTE:you can visualise the decomposition of clusters with multiple matches
 % by giving minNrNodesToPlot a small value, e.g. minNrNodesToPlot = 4.
 % plotNetOrNot = 1; % 0/1 plots global network of all matches colored by penalisation scores.
 % minNrNodesToPlot = 3
@@ -241,21 +248,21 @@ end
 % other methods consider matches as poor even if they are outside threshold on a single dimension
 % NOTE2: trend_mad and residuals_mad are calculated differentely and have
 % different plots, but yield the same results
-% opt.falsePos.methodType = 'scores'; {'none','scores','byBins','trend_mad','residuals_mad'} 
+% opt.falsePos.methodType = 'scores'; {'none','scores','byBins','trend_mad','residuals_mad'}
 % Example:
 % opt.falsePos.nrMad = 5;
 % plotOrNot = 1;
 % [eL_final, eL_final_INFO] =M2S_findPoorMatches(eL,refSet,targetSet,opt.falsePos.methodType,opt.falsePos.nrMad,plotOrNot);
 % Example with default settings - methodType = trend_mad; nrMad = 5:
-% [eL_final, eL_final_INFO] = M2S_findPoorMatches(eL,refSet,targetSet); 
+% [eL_final, eL_final_INFO] = M2S_findPoorMatches(eL,refSet,targetSet);
 
 if datasetName == "LNEG"
-    opt.falsePos.methodType = 'trend_mad'; %{'none','scores','byBins','trend_mad','residuals_mad'} 
+    opt.falsePos.methodType = 'trend_mad'; %{'none','scores','byBins','trend_mad','residuals_mad'}
     opt.falsePos.nrMad = 5;
     plotOrNot = 1;
     [eL_final, eL_final_INFO] = M2S_findPoorMatches(eL,refSet,targetSet,opt.falsePos.methodType,opt.falsePos.nrMad,plotOrNot);
 elseif datasetName == "LPOS"
-    opt.falsePos.methodType = 'scores'; %{'none','scores','byBins','trend_mad','residuals_mad'} 
+    opt.falsePos.methodType = 'scores'; %{'none','scores','byBins','trend_mad','residuals_mad'}
     opt.falsePos.nrMad = 5;
     plotOrNot = 1;
     [eL_final, eL_final_INFO] = M2S_findPoorMatches(eL,refSet,targetSet,opt.falsePos.methodType,opt.falsePos.nrMad,plotOrNot);
@@ -279,7 +286,7 @@ disp(tableOfMatches)
 % Table with all results : eL_final
 disp(eL_final)
 disp(eL_final_INFO)
- 
+
 % The options used in the methods:
 disp(opt)
 
@@ -303,7 +310,7 @@ writetable(targetTable,'M2S_datasetsMatched.xlsx','Sheet',2)
 
 %% TO LOAD MICROSOFT EXCEL .xlsx FILES WITH INITIAL DATA AND CREATE MATCHED DATASETS:
 % NOTE: each .xlsx file (one for reference another for target) needs to have sheets called "Data" and "VarInfo"
-% Sheet "Data" contains only numerical values. N rows of samples vs P columns of metabolomic features 
+% Sheet "Data" contains only numerical values. N rows of samples vs P columns of metabolomic features
 % Sheet "VarInfo" contains P+1 rows of metabolomic features info (e.g., RT, mz, feature name)
 % plus the column label for each of the columns
 
@@ -322,7 +329,7 @@ filenameTarget = 'targetDataset.xlsx'
 
 sorted_refIndices_idx = (1:length(refFeatures_idx))';
 orderForData_Ref = NaN(size(refFeatures,1),1);
-orderForData_Ref(refFeatures_idx) = sorted_refIndices_idx; 
+orderForData_Ref(refFeatures_idx) = sorted_refIndices_idx;
 orderForData_Ref_MZRTstr = M2S_createLabelMZRT('REF',refFeatures(:,2),refFeatures(:,1));
 matchedRefData_idx = table(orderForData_Ref,orderForData_Ref_MZRTstr,'VariableNames',{'matchedIdxRef','MZRT_ref'});
 
@@ -340,7 +347,7 @@ writetable(matchedTargetData_idx,'M2S_matchedTargetData_idx.xlsx')
 % 0. Run the functions above to save two tables of "M2S_matchedData_idx" (ref and target).
 % 1. Copy 'M2S_matchedRefData_idx' and 'matchedTargetData_idx' to the datasheets (e.g. Excel, csv, etc)
 %    of ref and target you want to match, and paste them along the variables
-% 2. Sort the variables in ascending order of the NUMERICAL indices (min to max), so the row order becomes 1, 2, 3, etc. The empty indices will be sent to the end. 
+% 2. Sort the variables in ascending order of the NUMERICAL indices (min to max), so the row order becomes 1, 2, 3, etc. The empty indices will be sent to the end.
 % 3. Delete the data for variables with empty indices (these features do not match anything)
 % 4. Check there is the same number of variables in both datasets and these
 %    have similar (matched) RT and MZ (and FI?). Check that the MZRT_string matches
@@ -353,7 +360,7 @@ writetable(matchedTargetData_idx,'M2S_matchedTargetData_idx.xlsx')
 
 %% SUPPORT FUNCTIONS
 
-M2S_figureH(screenWidthPercentage,screenHeightPercentage) 
+M2S_figureH(screenWidthPercentage,screenHeightPercentage)
 % Objective: create figure with % of width and height percent of the screen size
 
 M2S_plotDelta_matchedSets(refMatched,targetMatched,Xsymbol)
@@ -361,7 +368,7 @@ M2S_plotDelta_matchedSets(refMatched,targetMatched,Xsymbol)
 
 [newOpt] = M2S_addOptions(optOld,additionalOpt)
 % Objective: add single options to default options without having to define all option values.
-% NOTE: all opts are struct variables. 
+% NOTE: all opts are struct variables.
 % Example: additionalOpt.MZ_intercept = 0.05
 % [newOpt] = M2S_addOptions(optOld,additionalOpt)
 
@@ -389,17 +396,17 @@ M2S_colorByY_ofSubplot(subplotNr,figH)
 % In some cases the matches contain very large clusters, and it would be
 % beneficial/easier to not use those to calculate initial thresholds. This
 % function can be used after 'M2S_matchAll', to delete clusters with more
-% than e.g. maxFeaturesInCluster = 5. 
+% than e.g. maxFeaturesInCluster = 5.
 
-%% Create matrices 'Residuals_X', 'Residuals_trendline' from reduced matched sets. 
+%% Create matrices 'Residuals_X', 'Residuals_trendline' from reduced matched sets.
 % To use after applying M2S_calculateResiduals to a reduced refSet+targetSet
 [Residuals_X,Residuals_trendline] = M2S_interpolateTrendline(reduced_refSet,Reduced_trendline,refSet,targetSet)
-% Match feature datasets with tight thresholds, or delete large clusters, 
+% Match feature datasets with tight thresholds, or delete large clusters,
 % get inter-dataset shifts. Then transfer it to dataset with all features.
 
 [genAlg_Res,optBest] = M2S_genAlg_optimisation(refSet, targetSet, RTdist, MZdist, opt, plotOrNot)
 % Objective: optimise initial RT, MZ thresholds.
-% Use after running the function M2S_matchAll 
+% Use after running the function M2S_matchAll
 % It runs a genetic algorithm for optimisation.
 
 
