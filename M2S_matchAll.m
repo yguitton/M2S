@@ -1,6 +1,6 @@
 function [refSet,targetSet,Xr_connIdx,Xt_connIdx,opt]=M2S_matchAll(refFeatures,targetFeatures,multThresh,FIadjustMethod,plotType)
 %% M2S_matchAll
-% Function to calculate matches between two LCMS datasets according to 
+% Function to calculate matches between two LCMS datasets according to
 % specified RT/MZ/log10FI distances between the features in two datasets.
 %
 % Background:
@@ -11,11 +11,11 @@ function [refSet,targetSet,Xr_connIdx,Xt_connIdx,opt]=M2S_matchAll(refFeatures,t
 %
 %
 % INPUT:
-% refFeatures, targetFeatures: two matrices of [RT,MZ,FI] 
+% refFeatures, targetFeatures: two matrices of [RT,MZ,FI]
 % RT is a column of retention time in minutes
 % MZ is a column of m/z in m/z units
 % FI is the feature intensity (peak area)
-% 
+%
 % multThresh: values for intercept and slope for two threshold lines in
 % each of the three dimensions. Default as below:
 %
@@ -23,7 +23,7 @@ function [refSet,targetSet,Xr_connIdx,Xt_connIdx,opt]=M2S_matchAll(refFeatures,t
 % multThresh.MZ_slope = 0;
 % multThresh.RT_intercept = 1;
 % multThresh.RT_slope = 0;
-% multThresh.log10FI_intercept = 1000; 
+% multThresh.log10FI_intercept = 1000;
 % multThresh.log10FI_slope = 0;
 %
 % FIadjustMethod: method to adjust the FI of target to reference {'none','median','regression'}
@@ -50,7 +50,9 @@ function [refSet,targetSet,Xr_connIdx,Xt_connIdx,opt]=M2S_matchAll(refFeatures,t
 % *** Imperial College London, 2021 ***
 
 
-
+% Addition YGU replacement function for contains equivalent
+% Anonymous function mimicking contains from https://stackoverflow.com/questions/59743559/is-there-an-octave-equivalent-of-matlabs-contains-function
+contains = @(str, pattern) ~cellfun('isempty', strfind(str, pattern));
 
 
 if nargin == 2
@@ -58,12 +60,12 @@ if nargin == 2
     multThresh.MZ_slope = 0;
     multThresh.RT_intercept = abs(max([refFeatures(:,1);targetFeatures(:,1)])-min([targetFeatures(:,1);refFeatures(:,1)]));
     multThresh.RT_slope = 0;
-    multThresh.log10FI_intercept = 1000; 
+    multThresh.log10FI_intercept = 1000;
     multThresh.log10FI_slope = 0;
     multThresh.selfMatchingOrNot = 0;% May exist or not
     FIadjustMethod = 'none';
     plotType = 1;
-elseif nargin == 3    
+elseif nargin == 3
     FIadjustMethod = 'none';
     plotType = 1;
 elseif nargin == 4
@@ -105,9 +107,9 @@ if length(multThresh.log10FI_slope) ==1
 end
 
 
-%% Calculate the individual RTthresh_intercept and MZthresh 
-RTthresh = repmat(multThresh.RT_intercept,length(RTref),1) + [multThresh.RT_slope(1)*RTref , multThresh.RT_slope(2)*RTref]; 
-MZthresh = repmat(multThresh.MZ_intercept,length(MZref),1) + [multThresh.MZ_slope(1)*MZref , multThresh.MZ_slope(2)*MZref]; 
+%% Calculate the individual RTthresh_intercept and MZthresh
+RTthresh = repmat(multThresh.RT_intercept,length(RTref),1) + [multThresh.RT_slope(1)*RTref , multThresh.RT_slope(2)*RTref];
+MZthresh = repmat(multThresh.MZ_intercept,length(MZref),1) + [multThresh.MZ_slope(1)*MZref , multThresh.MZ_slope(2)*MZref];
 
 %% For each ref feature, find target features within RT and MZ threshold distances
 Xr_connIdx_i = [];
@@ -117,7 +119,7 @@ for refFeatureNr = 1 : length(RTref)
     waitbar(refFeatureNr/length(RTref),wb1,'Calculating all matches within thresholds','Name','Info');
     RTdist_individual = RTtarget - RTref(refFeatureNr);
     MZdist_individual = MZtarget - MZref(refFeatureNr);
-        
+
     RTdistOK =  (RTdist_individual > RTthresh(refFeatureNr,1) ) &  (RTdist_individual < RTthresh(refFeatureNr,2));
     MZdistOK =  (MZdist_individual > MZthresh(refFeatureNr,1) ) &  (MZdist_individual < MZthresh(refFeatureNr,2));
     RTMZdistOK = RTdistOK .* MZdistOK;
@@ -162,7 +164,7 @@ end
 log10FIdist_i = log10(targetSet_i(:,3)) - log10(refSet_i(:,3));
 
 log10FIthresh_i = repmat(multThresh.log10FI_intercept,length(log10FIdist_i),1) + ...
-    [multThresh.log10FI_slope(1)*log10(refSet_i(:,3)) , multThresh.log10FI_slope(2)*log10(refSet_i(:,3))]; 
+    [multThresh.log10FI_slope(1)*log10(refSet_i(:,3)) , multThresh.log10FI_slope(2)*log10(refSet_i(:,3))];
 
 % select the ones that are within FI threshold limits. Boolean vector: 0 is bad, 1 is good
 FIdistOK_01 =  (log10FIdist_i > log10FIthresh_i(:,1) ) &  (log10FIdist_i < log10FIthresh_i(:,2));
@@ -181,7 +183,7 @@ if isempty(Xr_connIdx)
     disp('THERE ARE NO HITS')
 else
     if plotType > 0
-        load ('M2ScolorScheme.mat');  
+        load ('M2ScolorScheme.mat');
         % The following is needed for subplot 3 (log10FI)
 
         % If there are no features with log10FI lower than lower threshold
@@ -197,9 +199,9 @@ else
         else
             ylimFImax = [multThresh.log10FI_intercept(2) + min(log10(refSet_i(:,3)))*multThresh.log10FI_slope(2);multThresh.log10FI_intercept(2) + max(log10(refSet_i(:,3)))*multThresh.log10FI_slope(2) ];
         end
-        
+
       % Find the multiple matches to plot (indices in refSet_i and targetSet_i)
-        
+
         table_ref_idx = tabulate(Xr_connIdx_i);
         table_ref_idx(table_ref_idx(:,2) <= 1,:) = [];
         table_target_idx = tabulate(Xt_connIdx_i);
@@ -212,8 +214,8 @@ else
             multMatch_idx = [multMatch_idx;find(Xt_connIdx_i == table_target_idx(t,1))];
         end
         multMatch_idx = unique(multMatch_idx);
-        
-        
+
+
         %% PLOT
 
         if plotType == 1
@@ -230,9 +232,9 @@ else
             plot(refSet_i(FIdistOK_01==1,1),targetSet_i(FIdistOK_01==1,1)-refSet_i(FIdistOK_01==1,1),'.k','MarkerSize',11) , grid on
             plot(refSet_i(FIdistOK_01==0,1),targetSet_i(FIdistOK_01==0,1)-refSet_i(FIdistOK_01==0,1),'.','MarkerSize',11,'Color',M2Scolor.orange) , grid on
             plot(refSet_i(multMatch_idx,1),targetSet_i(multMatch_idx,1)-refSet_i(multMatch_idx,1),'o','MarkerSize',5,'Color',M2Scolor.lblue) % with multiple matches
-            xlabel('RT ref (minutes)'),ylabel('RTdist (minutes)') ; axis tight 
+            xlabel('RT ref (minutes)'),ylabel('RTdist (minutes)') ; axis tight
 
-            % PLOT: MZdist vs MZref    
+            % PLOT: MZdist vs MZref
             subplot(1,3,2)
 %             fill([0; max(refSet_i(:,2));  max(refSet_i(:,2)); 0],...
 %                 [multThresh.MZ_intercept(1) ;multThresh.MZ_intercept(1) + max(refSet_i(:,2))*multThresh.MZ_slope(1);multThresh.MZ_intercept(2) + max(refSet_i(:,2))*multThresh.MZ_slope(2);multThresh.MZ_intercept(2)],'b','FaceAlpha',0.1), hold on
@@ -267,23 +269,23 @@ else
             subplot(1,3,1)
             plot([0;max(refSet_i(:,1))],[multThresh.RT_intercept(1);max(refSet_i(:,1))*multThresh.RT_slope(1)+multThresh.RT_intercept(1)],'-','LineWidth',2,'Color',M2Scolor.dblue), hold on
             plot([0;max(refSet_i(:,1))],[multThresh.RT_intercept(2);max(refSet_i(:,1))*multThresh.RT_slope(2)+multThresh.RT_intercept(2)],'-','LineWidth',2,'Color',M2Scolor.dblue)
-            M2S_plotLinkedPoints(refSet_i(:,1),targetSet_i(:,1)-refSet_i(:,1),Xr_connIdx_i,'ok',':',M2Scolor.lgrey,[]) 
-            M2S_plotLinkedPoints(refSet_i(:,1),targetSet_i(:,1)-refSet_i(:,1),Xt_connIdx_i,'ok',':',M2Scolor.orange,[]) 
+            M2S_plotLinkedPoints(refSet_i(:,1),targetSet_i(:,1)-refSet_i(:,1),Xr_connIdx_i,'ok',':',M2Scolor.lgrey,[])
+            M2S_plotLinkedPoints(refSet_i(:,1),targetSet_i(:,1)-refSet_i(:,1),Xt_connIdx_i,'ok',':',M2Scolor.orange,[])
             plot(refSet_i(FIdistOK_01==0,1),targetSet_i(FIdistOK_01==0,1)-refSet_i(FIdistOK_01==0,1),'.','MarkerSize',8,'Color',M2Scolor.orange) , grid on
             plot(refSet_i(multMatch_idx,1),targetSet_i(multMatch_idx,1)-refSet_i(multMatch_idx,1),'o','MarkerSize',5,'Color',M2Scolor.lblue) % with multiple matches
             xlabel('RT ref (minutes)'),ylabel('RTdist (minutes)') ; axis tight %xlim([0,max(refSet_i(:,1))])
 
-            % PLOT: MZdist vs MZref    
+            % PLOT: MZdist vs MZref
             subplot(1,3,2)
             plot([0;max(refSet_i(:,2))],[multThresh.MZ_intercept(1);max(refSet_i(:,2))*multThresh.MZ_slope(1)+multThresh.MZ_intercept(1)],'-','LineWidth',2,'Color',M2Scolor.dblue), hold on
             plot([0;max(refSet_i(:,2))],[multThresh.MZ_intercept(2);max(refSet_i(:,2))*multThresh.MZ_slope(2)+multThresh.MZ_intercept(2)],'-','LineWidth',2,'Color',M2Scolor.dblue)
-            M2S_plotLinkedPoints(refSet_i(:,2),targetSet_i(:,2)-refSet_i(:,2),Xr_connIdx_i,'ok',':',M2Scolor.lgrey,{'MZ ref','MZdist'}) 
-            M2S_plotLinkedPoints(refSet_i(:,2),targetSet_i(:,2)-refSet_i(:,2),Xt_connIdx_i,'ok',':',M2Scolor.orange,{'MZ ref','MZdist'}) 
+            M2S_plotLinkedPoints(refSet_i(:,2),targetSet_i(:,2)-refSet_i(:,2),Xr_connIdx_i,'ok',':',M2Scolor.lgrey,{'MZ ref','MZdist'})
+            M2S_plotLinkedPoints(refSet_i(:,2),targetSet_i(:,2)-refSet_i(:,2),Xt_connIdx_i,'ok',':',M2Scolor.orange,{'MZ ref','MZdist'})
             plot(refSet_i(FIdistOK_01==0,2),targetSet_i(FIdistOK_01==0,2)-refSet_i(FIdistOK_01==0,2),'.','MarkerSize',8,'Color',M2Scolor.orange) , grid on
             plot(refSet_i(multMatch_idx,2),targetSet_i(multMatch_idx,2)-refSet_i(multMatch_idx,2),'o','MarkerSize',5,'Color',M2Scolor.lblue) % with multiple matches
             xlabel('MZ ref (m/z units)'),ylabel('MZdist (m/z units)');hold on; axis tight
 
-            % PLOT: log10FIdist vs FIref         
+            % PLOT: log10FIdist vs FIref
             subplot(1,3,3)
             plot([min(log10(refSet_i(:,3)));max(log10(refSet_i(:,3)))],[ylimFImin(1);ylimFImin(2)],'-','LineWidth',2,'Color',M2Scolor.dblue), hold on
             plot([min(log10(refSet_i(:,3)));max(log10(refSet_i(:,3)))],[ylimFImax(1);ylimFImax(2)],'-','LineWidth',2,'Color',M2Scolor.dblue)
@@ -296,8 +298,8 @@ else
             xlabel('log10FI ref'),ylabel('log10FIdist') ; axis tight
             drawnow
         end
-        
-        %% Create a GRAPH with all matches 
+
+        %% Create a GRAPH with all matches
         if plotType == 2
             CC = struct;
             MZRTstr_Ref = M2S_createLabelMZRT('REF',refSet_i(:,2),refSet_i(:,1));
@@ -335,7 +337,7 @@ else
             M2S_figureH(0.6,0.8);
             set(gcf,'Name','Nodes as metabolomic features: Reference in dark blue, Target in light blue. Grey edges are matches within all thresholds, orange edges are matches outside log10FI threshold.');
             movegui(gcf,'center')
-            p1 = plot(G1,'LineWidth',2,'EdgeColor',M2Scolor.lgrey); 
+            p1 = plot(G1,'LineWidth',2,'EdgeColor',M2Scolor.lgrey);
             highlight(p1,find(G1.Nodes.refNode==1),'NodeColor',M2Scolor.dblue,'MarkerSize',3);
             highlight(p1,find(G1.Nodes.refNode==0),'NodeColor',M2Scolor.lblue,'MarkerSize',3);
             highlight(p1,find(G1.Edges.rowNrInMatchedSets(FIdistOK_01==0)),'EdgeColor',M2Scolor.orange,'LineWidth',1.5)
@@ -345,7 +347,7 @@ else
 end
 
 % Check if RT is in seconds and not in minutes
-if max(refFeatures(:,1))>60 
+if max(refFeatures(:,1))>60
     warndlg('The retention time of refFeatures seems to be in seconds. Please divide it by 60 to make it in minutes','Warning');
 elseif max(targetFeatures(:,1))>60
     warndlg('The retention time of targetFeatures seems to be in seconds. Please divide it by 60 to make it in minutes','Warning');

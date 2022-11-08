@@ -1,12 +1,12 @@
 function [MZRTstring, repeatedStrings] = M2S_createLabelMZRT(stringForLabel,varargin)
 %% M2S_createLabelMZRT
-% create a label for each entry, e.g., {'SLPOS_1250.1234_5.1234'} 
-% (MS data m/z and RT in minutes) 
+% create a label for each entry, e.g., {'SLPOS_1250.1234_5.1234'}
+% (MS data m/z and RT in minutes)
 %
 % [MZRT_str] = M2S_createLabelMZRT('LipidPosMode',m_z,RetentionTime)
 %
 % INPUT:
-% MS DATA: 
+% MS DATA:
 % Input two separate columns (m/z values and retention time)
 % Given a label, and the values for the two columns:
 % [MZRT_str] = M2S_createLabelMZRT('LipidPositiveMode',m_z,RetentionTime)
@@ -15,10 +15,10 @@ function [MZRTstring, repeatedStrings] = M2S_createLabelMZRT(stringForLabel,vara
 % NOTE: the numerical data is truncated (nor rounded) at the 4th digit
 % after the decimal point.
 % NOTE: The function works also for single column of values, eg in NMR ppm.
-% NMR DATA: 
+% NMR DATA:
 % 1. Given a label, and the NMR ppm values
 % [X.VarInfo.MZRT_str] = M2S_createLabelMZRT('CPMG',X.VarInfo.ppm)
-% 
+%
 % NOTE: for whole-string labels, use the following code instead of this function:
 % X.VarInfo.MZRT_str = strcat("BILISA","_",stringArray)
 %
@@ -31,9 +31,9 @@ function [MZRTstring, repeatedStrings] = M2S_createLabelMZRT(stringForLabel,vara
 
 % If there is only one argument, create only one string
 arg1 = varargin{1};
-arg1_str=cell(length(arg1),1); 
+arg1_str=cell(length(arg1),1);
 for a=1:length(arg1)
-    
+
     if isnan(arg1(a))
         arg1_str{a,1} = 'NaN';
     else
@@ -50,28 +50,28 @@ for a=1:length(arg1)
 end
 
 
-% if there are two arguments, create a second string    
-if length(varargin) == 2   
+% if there are two arguments, create a second string
+if length(varargin) == 2
     arg2 = varargin{2};
-    
+
     %% force RT in minutes
     if nanmax(arg2)>150
         arg2=1/60*arg2;
     end
-    
-    arg2_str=cell(length(arg2),1); 
+
+    arg2_str=cell(length(arg2),1);
     for a=1:length(arg2)
-        
+
         if isnan(arg2(a))
             arg2_str{a,1} = 'NaN';
         else
             temp_arg2=num2str(floor(10000*arg2(a)));
             if arg2(a)<0.0001
                 arg2_str{a,1} = '0.0001';
-            elseif arg2(a)<0.001      
+            elseif arg2(a)<0.001
                 temp_arg2=num2str(floor(100000*arg2(a)));
                 arg2_str{a,1} = ['0.000',temp_arg2(end:end-1)];
-            elseif arg2(a)<0.01      
+            elseif arg2(a)<0.01
                 temp_arg2=num2str(floor(100000*arg2(a)));
                 arg2_str{a,1} = ['0.00',temp_arg2(end-2:end-1)];
             elseif arg2(a)<0.1
@@ -85,21 +85,25 @@ if length(varargin) == 2
         end
     end
 end
-   
+
 % Create the final label
-MZRTstring=cell(length(arg1),1);  
+MZRTstring=cell(length(arg1),1);
 if length(varargin) == 1
     for a=1:length(arg1)
-        MZRTstring{a,1}=[stringForLabel,'_', arg1_str{a,1}]; 
+        MZRTstring{a,1}=[stringForLabel,'_', arg1_str{a,1}];
     end
 elseif length(varargin) == 2
     for a=1:length(arg1)
-        MZRTstring{a,1}=[stringForLabel,'_', arg1_str{a,1},'_', arg2_str{a,1}]; 
+        MZRTstring{a,1}=[stringForLabel,'_', arg1_str{a,1},'_', arg2_str{a,1}];
     end
 end
 
 if length(unique(MZRTstring)) ~= length(MZRTstring)
-    disp('** WARNING: there are some repeated strings in the output **')
+    disp('** WARNING: Sad News there are some repeated strings in the output **')
+    disp('** DEBUG YGU cell2str **')
+    celldisp(MZRTstring)
+    cell2csv ("monfichier.csv", MZRTstring, ";");
+     %YGU add cell2mat(MZRTstring
     repeatedStrings = tabulate(MZRTstring);
     repeatedStrings = table(string(repeatedStrings(:,1)),str2double(string(repeatedStrings(:,2))),str2double(string(repeatedStrings(:,3))),'VariableNames',{'MZRT_str','Count','Percent'});
     repeatedStrings = sortrows(repeatedStrings,2,'descend');
